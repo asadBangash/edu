@@ -4,13 +4,14 @@ use App\Http\Controllers\Legacy\CodeIgniterBridgeController;
 use Illuminate\Support\Facades\Route;
 
 /**
- * CodeIgniter Smart School 7.2 (edux/) — served through Laravel until native modules ship.
- *
- * @see E:\school management ssyte\smart_school_src\application\config\routes.php
+ * CodeIgniter Smart School 7.x — served from storage via Laravel until native modules ship.
  */
+if (! config('edux.ci_bridge_enabled', true)) {
+    return;
+}
+
 $bridge = CodeIgniterBridgeController::class;
 
-Route::get('theme.css', $bridge);
 Route::get('fronttheme.css', $bridge);
 
 /** Public / unauthenticated CI entry points */

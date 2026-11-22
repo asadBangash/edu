@@ -2,8 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Support\SmartSchoolPaths;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -16,7 +19,7 @@ class EduxCiInventoryCommand extends Command
 
     public function handle(): int
     {
-        $ciRoot = config('edux.codeigniter_path') ?: base_path('edux');
+        $ciRoot = SmartSchoolPaths::runtimeRoot();
         $controllersDir = $ciRoot.DIRECTORY_SEPARATOR.'application'.DIRECTORY_SEPARATOR.'controllers';
 
         if (! is_dir($controllersDir)) {
@@ -25,7 +28,7 @@ class EduxCiInventoryCommand extends Command
             return self::FAILURE;
         }
 
-        $laravelRoutes = collect(\Illuminate\Support\Facades\Route::getRoutes())
+        $laravelRoutes = collect(Route::getRoutes())
             ->map(fn ($route) => trim($route->uri(), '/'))
             ->filter()
             ->values();
@@ -84,7 +87,7 @@ class EduxCiInventoryCommand extends Command
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, string>  $laravelRoutes
+     * @param  Collection<int, string>  $laravelRoutes
      */
     private function guessPorted(string $uri, $laravelRoutes): bool
     {

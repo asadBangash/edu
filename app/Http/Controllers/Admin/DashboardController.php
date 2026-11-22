@@ -3,14 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\SchSetting;
+use App\Services\SidebarMenuService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\View\View;
 
 class DashboardController extends BaseAdminController
 {
-    public function index(): View
+    public function index(SidebarMenuService $menus): View
     {
+        if (! config('edux.native_admin_dashboard', true)) {
+            abort(404);
+        }
+
         $admin = Session::get('admin');
         $setting = SchSetting::primary();
         $roleId = (int) (array_values($admin['roles'] ?? [])[0] ?? 0);
@@ -33,11 +38,11 @@ class DashboardController extends BaseAdminController
                 ->get();
         }
 
-        return $this->adminView('admin.dashboard', [
+        return $this->adminView('admin.dashboard', array_merge([
             'title' => 'Dashboard',
             'role_id' => $roleId,
             'notifications' => $notifications,
             'setting' => $setting,
-        ]);
+        ], $this->menuItems($menus)));
     }
 }

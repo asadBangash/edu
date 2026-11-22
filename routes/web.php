@@ -3,6 +3,7 @@
 use App\Http\Controllers\DemoController;
 use App\Http\Controllers\Legacy\CodeIgniterBridgeController;
 use App\Http\Controllers\Site\AuthController;
+use App\Http\Controllers\SmartSchoolAssetController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [DemoController::class, 'index'])->name('demo');
@@ -14,8 +15,18 @@ Route::prefix('site')->name('site.')->group(function () {
     Route::get('/userlogout', [AuthController::class, 'userLogout'])->name('userlogout');
 });
 
+Route::get('backend/{path}', [SmartSchoolAssetController::class, 'backend'])
+    ->where('path', '.*')
+    ->name('edux.backend.asset');
+
+Route::get('theme.css', [SmartSchoolAssetController::class, 'themeCss'])->name('edux.theme.css');
+
+Route::get('uploads/{path}', [SmartSchoolAssetController::class, 'uploads'])
+    ->where('path', '.*')
+    ->name('edux.uploads');
+
 /*
-| Smart School front CMS & public CI routes (full Welcome/theme stack from edux/).
+| Smart School front CMS & public CI routes (materialized runtime under storage/).
 */
 $ciBridge = CodeIgniterBridgeController::class;
 
@@ -24,20 +35,6 @@ Route::match(['get', 'post'], '/welcome/{path?}', $ciBridge)->where('path', '.*'
 Route::match(['get', 'post'], '/page/{slug}', $ciBridge)->where('slug', '.*')->name('frontend.page');
 Route::match(['get', 'post'], '/read/{slug}', $ciBridge)->where('slug', '.*');
 
-Route::get('/uploads/{path}', function (string $path) {
-    $candidates = [
-        base_path('edux/uploads/'.$path),
-        'D:/laragon/www/edux/uploads/'.$path,
-    ];
-
-    foreach ($candidates as $file) {
-        if (is_file($file)) {
-            return response()->file($file);
-        }
-    }
-
-    abort(404);
-})->where('path', '.*')->name('edux.uploads');
-
 require __DIR__.'/edux.php';
+require __DIR__.'/admin.php';
 require __DIR__.'/ci-bridge.php';

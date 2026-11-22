@@ -12,13 +12,13 @@ Laravel 13 application that runs **Smart School** (CodeIgniter) through a HTTP b
 ## Local development (Laragon)
 
 1. Clone the repo into your web root (e.g. `www/edu-x`).
-2. Copy your licensed **Smart School** `application/` tree into **`edux/`** beside this project (not in Git — see `docs/DEPLOYMENT.md`).
+2. Set `SMART_SCHOOL_SRC` in `.env` to your licensed Smart School folder (read-only; never committed).
 3. Copy `.env.example` to `.env` and set `APP_URL`, database credentials, and `APP_KEY` (`php artisan key:generate`).
-4. `composer install` and `composer install --working-dir=edux/application/third_party/omnipay`
-5. `php artisan migrate` (if using Laravel migrations) and import/seed your Smart School schema into `edu_x`.
-6. Point the virtual host **document root** to `public/` (not the project root).
-7. Ensure static assets are reachable (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for `/backend`, `/uploads`, `/theme.css`).
-8. `php artisan edux:smoke-test` — all checks should pass.
+4. `composer install`, then `php artisan edux:materialize-runtime` (copies CI into `storage/`, applies Laravel patches).
+5. `composer install --working-dir=storage/app/smart-school-runtime/application/third_party/omnipay`
+6. `php artisan migrate` (if using Laravel migrations) and import/seed your Smart School schema into `edu_x`.
+7. Point the virtual host **document root** to `public/` (not the project root).
+8. `php artisan edux:doctor` and `php artisan edux:smoke-test` — all checks should pass.
 
 Default staff login matches Smart School demo data if seeded: adjust per your `staff` table.
 
@@ -26,6 +26,8 @@ Default staff login matches Smart School demo data if seeded: adjust per your `s
 
 | Command | Purpose |
 |---------|---------|
+| `php artisan edux:materialize-runtime` | Build CI runtime under `storage/` from `SMART_SCHOOL_SRC` |
+| `php artisan edux:doctor` | Check runtime, bridge, logos; use `--fix` to seed assets |
 | `php artisan edux:smoke-test` | HTTP smoke tests for bridge and admin |
 | `php artisan edux:verify-data` | Data integrity checks |
 | `php artisan edux:sync-smart-school` | Sync CI tree from `SMART_SCHOOL_SRC` (excludes EduX patches) |
@@ -40,4 +42,4 @@ Default staff login matches Smart School demo data if seeded: adjust per your `s
 
 ## License
 
-Proprietary — Smart School (Codecanyon) core in `edux/` is subject to your purchase license. Do not redistribute `edux/` without compliance with that license.
+Proprietary — Smart School (Codecanyon) core materialized under `storage/` is subject to your purchase license. Do not redistribute it without compliance with that license.

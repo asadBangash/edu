@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SchSetting;
 use App\Services\StaffAuthService;
 use App\Services\StudentAuthService;
+use App\Support\AdminRedirect;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
@@ -29,7 +30,11 @@ class AuthController extends Controller
             ]);
 
             if ($staffAuth->attempt($request->input('username'), $request->input('password'))) {
-                $redirect = Session::pull('redirect_to', url('admin/admin/dashboard'));
+                $default = url('admin/admin/dashboard');
+                $redirect = AdminRedirect::sanitizeAfterLogin(
+                    Session::pull('redirect_to'),
+                    $default,
+                );
 
                 return redirect()->to($redirect);
             }

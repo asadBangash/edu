@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\SmartSchoolPaths;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
@@ -28,10 +29,12 @@ class EduxAssetSeeder
 
     public function __construct()
     {
-        $this->uploadRoots = array_values(array_filter([
-            base_path('edux/uploads'),
-            is_dir('D:/laragon/www/edux/uploads') ? 'D:/laragon/www/edux/uploads' : null,
-        ]));
+        $this->uploadRoots = [SmartSchoolPaths::uploadsRoot()];
+    }
+
+    private function brandingPath(string $filename): string
+    {
+        return SmartSchoolPaths::brandingDir().DIRECTORY_SEPARATOR.$filename;
     }
 
     /**
@@ -57,11 +60,15 @@ class EduxAssetSeeder
 
     public function seedSchoolLogos(): int
     {
-        $srcLogo = base_path('edux/backend/img/edux/'.(is_file(base_path('edux/backend/img/edux/'.self::LOGO_PNG)) ? self::LOGO_PNG : self::LOGO_SVG));
-        $srcIcon = base_path('edux/backend/img/edux/'.self::FAVICON_SVG);
+        $srcLogo = $this->brandingPath(is_file($this->brandingPath(self::LOGO_PNG)) ? self::LOGO_PNG : self::LOGO_SVG);
+        $srcIcon = $this->brandingPath(self::FAVICON_SVG);
 
-        if (! is_file($srcLogo) || ! is_file($srcIcon)) {
-            throw new \RuntimeException('Missing logo sources under edux/backend/img/edux/');
+        if (! is_file($srcLogo)) {
+            throw new \RuntimeException('Missing logo sources under backend/img/edux (materialize runtime or set SMART_SCHOOL_SRC).');
+        }
+
+        if (! is_file($srcIcon)) {
+            $srcIcon = $srcLogo;
         }
 
         $dirs = [
@@ -80,8 +87,8 @@ class EduxAssetSeeder
                 }
                 $logoName = basename($srcLogo);
                 File::copy($srcLogo, $dir.'/'.$logoName);
-                if ($logoName !== self::LOGO_SVG && is_file(base_path('edux/backend/img/edux/'.self::LOGO_SVG))) {
-                    File::copy(base_path('edux/backend/img/edux/'.self::LOGO_SVG), $dir.'/'.self::LOGO_SVG);
+                if ($logoName !== self::LOGO_SVG && is_file($this->brandingPath(self::LOGO_SVG))) {
+                    File::copy($this->brandingPath(self::LOGO_SVG), $dir.'/'.self::LOGO_SVG);
                     $count++;
                 }
                 File::copy($srcIcon, $dir.'/'.self::FAVICON_SVG);
@@ -97,7 +104,10 @@ class EduxAssetSeeder
 
     public function seedLoginBackgrounds(): int
     {
-        $srcDir = base_path('edux/uploads/school_content/login_image');
+        $srcDir = SmartSchoolPaths::uploadsRoot().'/school_content/login_image';
+        if (! is_dir($srcDir) || count(glob($srcDir.'/*') ?: []) === 0) {
+            $srcDir = SmartSchoolPaths::sourceRoot().'/uploads/school_content/login_image';
+        }
         if (! is_dir($srcDir)) {
             return 0;
         }
@@ -158,15 +168,16 @@ class EduxAssetSeeder
      */
     public function mirrorBundledUploads(): int
     {
-        $primary = base_path('edux/uploads');
+        $primary = SmartSchoolPaths::uploadsRoot();
+        $sourceUploads = SmartSchoolPaths::sourceRoot().'/uploads';
         $count = 0;
 
-        foreach ($this->uploadRoots as $root) {
-            if ($root === $primary) {
+        foreach (['student_images', 'staff_images'] as $folder) {
+            $src = is_dir($primary.'/'.$folder) ? $primary.'/'.$folder : $sourceUploads.'/'.$folder;
+            if (! is_dir($src)) {
                 continue;
             }
-            foreach (['student_images', 'staff_images'] as $folder) {
-                $src = $primary.'/'.$folder;
+            foreach ($this->uploadRoots as $root) {
                 if (! is_dir($src)) {
                     continue;
                 }
@@ -217,7 +228,7 @@ class EduxAssetSeeder
             return;
         }
 
-        $logoPath = is_file(base_path('edux/backend/img/edux/'.self::LOGO_PNG))
+        $logoPath = is_file($this->brandingPath(self::LOGO_PNG))
             ? 'backend/img/edux/'.self::LOGO_PNG
             : 'backend/img/edux/'.self::LOGO_SVG;
 
@@ -229,7 +240,7 @@ class EduxAssetSeeder
 
     private function writeBrandLogos(string $uploadRoot): void
     {
-        $banner = base_path('edux/backend/img/edux/'.self::LOGO_PNG);
+        $banner = $this->brandingPath(self::LOGO_PNG);
         $map = [
             'school_content/logo/'.self::PRINT_PNG,
             'school_content/admin_logo/'.self::ADMIN_PNG,
@@ -258,7 +269,7 @@ class EduxAssetSeeder
 
     private function resolveLoginBackgroundFilename(): ?string
     {
-        $dir = base_path('edux/uploads/school_content/login_image');
+        $dir = SmartSchoolPaths::uploadsRoot().'/school_content/login_image';
         if (! is_dir($dir)) {
             return null;
         }
@@ -295,7 +306,7 @@ class EduxAssetSeeder
     private function renderLogoPng(string $path, int $width, int $height, bool $compact): void
     {
         if (! function_exists('imagecreatetruecolor')) {
-            $fallback = base_path('edux/uploads/school_content/logo/1.png');
+            $fallback = SmartSchoolPaths::uploadsRoot().'/school_content/logo/1.png';
             if (is_file($fallback)) {
                 File::copy($fallback, $path);
             }
@@ -331,7 +342,7 @@ class EduxAssetSeeder
     private function renderPlaceholderPng(string $path, int $width, int $height, string $label): void
     {
         if (! function_exists('imagecreatetruecolor')) {
-            $fallback = base_path('edux/uploads/school_content/logo/1.png');
+            $fallback = SmartSchoolPaths::uploadsRoot().'/school_content/logo/1.png';
             if (is_file($fallback)) {
                 File::copy($fallback, $path);
             }

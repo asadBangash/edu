@@ -30,9 +30,12 @@ class EduxSeedPakistanDemoCommand extends Command
 
         putenv('EDUX_SEED_DATABASE='.$database);
 
-        $script = base_path('edux/temp/edux_dashboard_dummy_data.php');
+        $script = resource_path('smart-school/scripts/edux_dashboard_dummy_data.php');
         if (! is_file($script)) {
-            $this->error('Missing '.$script);
+            $this->warn('Skipping chart seed — missing '.$script);
+            $this->info('Branding and uploads were applied.');
+
+            return self::SUCCESS;
 
             return self::FAILURE;
         }

@@ -1,5 +1,7 @@
 <?php
 
+$storageRuntime = storage_path('app'.DIRECTORY_SEPARATOR.'smart-school-runtime');
+
 return [
     'product_name' => 'EduX School System',
     'tagline' => 'Smart School Management — Peshawar, Pakistan',
@@ -16,15 +18,24 @@ return [
     'favicon_path' => 'backend/img/edux/edux-favicon.svg',
     'source_database' => env('EDUX_SOURCE_DB', 'sms'),
 
-    /** Bundled Smart School CI tree used by the Laravel bridge (edu-x/edux). */
-    'codeigniter_path' => env('EDUX_CI_PATH', base_path('edux')),
-
-    /** Codecanyon / reference source for sync (Smart School 7.2.0). */
+    /** Licensed Smart School package (read-only reference). Never modified by EduX. */
     'smart_school_src' => env('SMART_SCHOOL_SRC', 'E:\\school management ssyte\\smart_school_src'),
 
     /**
-     * Legacy site URL (still on CodeIgniter) for modules not yet ported in Laravel.
-     * Used in docs and optional bridging; set in .env if different from edux.test.
+     * Materialized CI runtime for the bridge (gitignored under storage/).
+     * Build with: php artisan edux:materialize-runtime
      */
+    'codeigniter_path' => env('EDUX_CI_PATH', $storageRuntime),
+
+    /** Writable school uploads (logos, documents). Seeded from source on materialize. */
+    'uploads_path' => env('EDUX_UPLOADS_PATH', storage_path('app/school-uploads')),
+
+    /** When true, Laravel serves admin/admin/dashboard (not CodeIgniter). */
+    /** Full Smart School dashboard via bridge until Laravel dashboard is feature-complete. */
+    'native_admin_dashboard' => env('EDUX_NATIVE_ADMIN', false),
+
+    /** When false, unmigrated modules are not served via the CI bridge. */
+    'ci_bridge_enabled' => env('EDUX_CI_BRIDGE', true),
+
     'codeigniter_url' => env('EDUX_CODEIGNITER_URL', 'http://edux.test'),
 ];

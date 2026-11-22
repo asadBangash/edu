@@ -21,9 +21,9 @@ class EduxSeedDashboardCommand extends Command
 
         putenv('EDUX_SEED_DATABASE='.$database);
 
-        $script = base_path('edux/temp/edux_dashboard_dummy_data.php');
+        $script = resource_path('smart-school/scripts/edux_dashboard_dummy_data.php');
         if (! is_file($script)) {
-            $this->error('Missing '.$script);
+            $this->error('Missing '.$script.' (add script under resources/smart-school/scripts/ if needed).');
 
             return self::FAILURE;
         }

@@ -6,19 +6,30 @@ use App\Http\Controllers\Controller;
 use App\Models\SchSetting;
 use App\Services\CodeIgniterSessionBridge;
 use App\Services\StudentAuthService;
+use App\Support\SmartSchoolPaths;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
- * Serves unmigrated CodeIgniter routes from edu-x/edux until native Laravel controllers exist.
+ * Serves unmigrated Smart School routes from the materialized CI runtime (storage/) until native Laravel modules ship.
  */
 class CodeIgniterBridgeController extends Controller
 {
     public function __invoke(Request $request, CodeIgniterSessionBridge $sessionBridge): SymfonyResponse
     {
+        if (! config('edux.ci_bridge_enabled', true)) {
+            abort(503, 'CodeIgniter bridge is disabled. Enable EDUX_CI_BRIDGE or migrate this module to Laravel.');
+        }
+
+        $ciRoot = SmartSchoolPaths::runtimeRoot();
+        $index = $ciRoot.DIRECTORY_SEPARATOR.'index.php';
+        if (! is_file($index)) {
+            abort(503, 'Smart School runtime missing. Run: php artisan edux:materialize-runtime');
+        }
+
         $this->clearPendingPhpHeaders();
 
         $ciSessionId = null;
@@ -62,6 +73,7 @@ class CodeIgniterBridgeController extends Controller
         putenv('EDUX_CI_DATABASE='.$dbName);
         putenv('EDUX_CI_BASE_URL='.$baseUrl);
         putenv('EDUX_CI_SESSION_PATH='.$sessionPath);
+        putenv('EDUX_CI_UPLOADS_PATH='.SmartSchoolPaths::uploadsRoot());
 
         $path = trim($request->path(), '/');
         $uri = '/'.$path;
@@ -85,12 +97,12 @@ class CodeIgniterBridgeController extends Controller
         $_FILES = $request->files->all();
 
         $previousDir = getcwd() ?: base_path();
-        chdir(base_path('edux'));
+        chdir($ciRoot);
 
         ob_start();
         $status = Response::HTTP_OK;
         try {
-            require base_path('edux/index.php');
+            require $index;
         } finally {
             chdir($previousDir);
         }
@@ -164,6 +176,7 @@ class CodeIgniterBridgeController extends Controller
     private function ensureStaffRoles(array $admin): array
     {
         $admin = $this->ensureStaffCurrencyBasePrice($admin);
+        $admin = $this->ensureStaffCalendarFields($admin);
 
         if (! empty($admin['roles']) && is_array($admin['roles']) && key($admin['roles']) !== null) {
             return $admin;
@@ -210,6 +223,36 @@ class CodeIgniterBridgeController extends Controller
         }
 
         return array_merge($student, $built);
+    }
+
+    /**
+     * @param  array<string, mixed>  $admin
+     * @return array<string, mixed>
+     */
+    private function ensureStaffCalendarFields(array $admin): array
+    {
+        if (isset($admin['start_week']) && $admin['start_week'] !== '') {
+            $startWeekSet = true;
+        } else {
+            $startWeekSet = false;
+        }
+
+        if (! isset($admin['is_rtl']) || $admin['is_rtl'] === '') {
+            $admin['is_rtl'] = 'disabled';
+        }
+
+        if ($startWeekSet) {
+            return $admin;
+        }
+
+        $setting = SchSetting::primary();
+        if ($setting && $setting->start_week) {
+            $admin['start_week'] = (int) date('w', strtotime($setting->start_week));
+        } else {
+            $admin['start_week'] = 0;
+        }
+
+        return $admin;
     }
 
     /** @param  array<string, mixed>  $admin */

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\SmartSchoolPaths;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
@@ -12,7 +13,7 @@ class EduxSyncSmartSchoolCommand extends Command
                             {--dry-run : List actions without copying}
                             {--force : Copy even when paths look identical}';
 
-    protected $description = 'Sync Smart School 7.x source from E:\\school management ssyte\\smart_school_src into edu-x/edux';
+    protected $description = 'Incremental sync from SMART_SCHOOL_SRC into the materialized runtime (preserves Laravel patches)';
 
     /** @var list<string> */
     private array $syncDirs = ['application', 'backend', 'system'];
@@ -32,15 +33,22 @@ class EduxSyncSmartSchoolCommand extends Command
         'application/views/admin/dashboard.php',
         'application/views/admin/login.php',
         'application/views/layout/header.php',
+        'application/views/layout/footer.php',
         'application/views/userlogin.php',
-        'application/core/MY_Controller.php',
         'application/controllers/Site.php',
+        'application/core/MY_Controller.php',
     ];
 
     public function handle(): int
     {
-        $source = $this->option('source') ?: config('edux.smart_school_src');
-        $target = base_path('edux');
+        $source = $this->option('source') ?: SmartSchoolPaths::sourceRoot();
+        $target = SmartSchoolPaths::runtimeRoot();
+
+        if (! is_file($target.DIRECTORY_SEPARATOR.'index.php')) {
+            $this->error('Runtime not materialized. Run: php artisan edux:materialize-runtime');
+
+            return self::FAILURE;
+        }
 
         if (! is_dir($source)) {
             $this->error("Source not found: {$source}");
@@ -50,9 +58,8 @@ class EduxSyncSmartSchoolCommand extends Command
         }
 
         if (! is_dir($target)) {
-            $this->error("Target not found: {$target}");
-
-            return self::FAILURE;
+            File::makeDirectory($target, 0755, true);
+            $this->warn("Created {$target}");
         }
 
         $dryRun = (bool) $this->option('dry-run');

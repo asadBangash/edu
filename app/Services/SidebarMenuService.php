@@ -34,8 +34,8 @@ class SidebarMenuService
             ->get();
 
         return $menus->filter(fn ($menu) => $this->menuVisible($menu))
-            ->map(function ($menu) use ($sidebarDisplay) {
-                $menu->submenus = $this->submenusForMenu((int) $menu->id, $sidebarDisplay)
+            ->map(function ($menu) {
+                $menu->submenus = $this->submenusForMenu((int) $menu->id)
                     ->filter(fn ($sub) => $this->submenuVisible($sub))
                     ->values();
 
@@ -44,26 +44,22 @@ class SidebarMenuService
             ->values();
     }
 
-  /**
+    /**
      * @return Collection<int, object>
      */
-    private function submenusForMenu(int $menuId, int $sidebarDisplay): Collection
+    private function submenusForMenu(int $menuId): Collection
     {
-        $query = DB::table('sidebar_sub_menus')
+        return DB::table('sidebar_sub_menus')
             ->leftJoin('permission_group', 'permission_group.id', '=', 'sidebar_sub_menus.permission_group_id')
             ->where('sidebar_sub_menus.sidebar_menu_id', $menuId)
             ->where('sidebar_sub_menus.is_active', 1)
-            ->orderBy('level');
-
-        if ($sidebarDisplay === 1) {
-            $query->where('sidebar_sub_menus.sidebar_display', $sidebarDisplay);
-        }
-
-        return $query->select([
-            'sidebar_sub_menus.*',
-            'permission_group.name as permission_group_name',
-            'permission_group.short_code as short_code',
-        ])->get();
+            ->orderBy('level')
+            ->select([
+                'sidebar_sub_menus.*',
+                'permission_group.name as permission_group_name',
+                'permission_group.short_code as short_code',
+            ])
+            ->get();
     }
 
     private function menuVisible(object $menu): bool

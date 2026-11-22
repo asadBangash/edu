@@ -25,15 +25,16 @@ git clone https://github.com/asadBangash/edu.git edu-x
 cd edu-x
 ```
 
-## 3b. Smart School (`edux/`) — not in Git
+## 3b. Smart School runtime — not in Git
 
-The CodeIgniter tree is **not stored in this repository** (size, licensing). On the server:
+The CodeIgniter tree is **not stored in this repository** (size, licensing). Do **not** keep an `edux/` folder in the project root.
 
-1. Upload your Smart School package as **`edux/`** (same layout as local: `application/`, `backend/`, `system/`, `uploads/`, etc.).
-2. Apply EduX bridge patches from your backup or run `php artisan edux:sync-smart-school` if `SMART_SCHOOL_SRC` is set on the server.
-3. `composer install --no-dev --working-dir=edux/application/third_party/omnipay`
+1. Set `SMART_SCHOOL_SRC` in `.env` to your licensed package path (read-only).
+2. `php artisan edux:materialize-runtime` — copies CI into `storage/app/smart-school-runtime` and applies committed patches from `resources/smart-school/patches/`.
+3. `composer install --no-dev --working-dir=storage/app/smart-school-runtime/application/third_party/omnipay`
+4. `php artisan edux:seed-assets` (branding / login images into `storage/app/school-uploads`).
 
-Copy **`edux/uploads/`** from your local machine if you need the same logos and media.
+Writable uploads live in **`storage/app/school-uploads/`** (junction-linked into the runtime). Back up this folder with your database.
 
 ## 4. Environment file
 
@@ -69,7 +70,8 @@ Never set `APP_DEBUG=true` on a public server.
 
 ```bash
 composer install --no-dev --optimize-autoloader
-composer install --no-dev --working-dir=edux/application/third_party/omnipay
+php artisan edux:materialize-runtime
+composer install --no-dev --working-dir=storage/app/smart-school-runtime/application/third_party/omnipay
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache

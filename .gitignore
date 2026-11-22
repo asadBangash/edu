@@ -56,8 +56,12 @@ ci_session*
 # PHP dependencies (install with composer on clone)
 /vendor
 
-# Smart School CodeIgniter tree — not in Git (copy from your licensed Smart School package on server)
+# Legacy — do not keep CodeIgniter under the project root
 /edux/
+
+# Materialized Smart School runtime + uploads (php artisan edux:materialize-runtime)
+/storage/app/smart-school-runtime/
+/storage/app/school-uploads/
 
 # Local dev / smoke scripts
 /temp/
