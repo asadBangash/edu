@@ -1,6 +1,12 @@
 <?php
 
 $storageRuntime = storage_path('app'.DIRECTORY_SEPARATOR.'smart-school-runtime');
+$projectEdux = base_path('edux');
+$projectEduxReady = is_file($projectEdux.DIRECTORY_SEPARATOR.'index.php');
+$defaultCiRoot = $projectEduxReady ? $projectEdux : $storageRuntime;
+$defaultUploads = is_dir($projectEdux.DIRECTORY_SEPARATOR.'uploads')
+    ? $projectEdux.DIRECTORY_SEPARATOR.'uploads'
+    : storage_path('app/school-uploads');
 
 return [
     'product_name' => 'EduX School System',
@@ -25,12 +31,11 @@ return [
      * Materialized CI runtime for the bridge (gitignored under storage/).
      * Build with: php artisan edux:materialize-runtime
      */
-    'codeigniter_path' => env('EDUX_CI_PATH', $storageRuntime),
+    'codeigniter_path' => env('EDUX_CI_PATH', $defaultCiRoot),
 
-    /** Writable school uploads (logos, documents). Seeded from source on materialize. */
-    'uploads_path' => env('EDUX_UPLOADS_PATH', storage_path('app/school-uploads')),
+    /** Writable school uploads (logos, documents). */
+    'uploads_path' => env('EDUX_UPLOADS_PATH', $defaultUploads),
 
-    /** When true, Laravel serves admin/admin/dashboard (not CodeIgniter). */
     /** Full Smart School dashboard via bridge until Laravel dashboard is feature-complete. */
     'native_admin_dashboard' => env('EDUX_NATIVE_ADMIN', false),
 

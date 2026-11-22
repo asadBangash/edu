@@ -56,10 +56,15 @@ ci_session*
 # PHP dependencies (install with composer on clone)
 /vendor
 
-# Legacy — do not keep CodeIgniter under the project root
-/edux/
+# edux/: Smart School in repo for deploy — exclude logs, uploads, omnipay vendor
+/edux/application/logs/
+/edux/application/cache/
+/edux/uploads/
+/edux/application/third_party/omnipay/vendor/
+/edux/application/third_party/firebase_notification_key.json
+/edux/temp/
 
-# Materialized Smart School runtime + uploads (php artisan edux:materialize-runtime)
+# Storage runtime (when not using project edux/)
 /storage/app/smart-school-runtime/
 /storage/app/school-uploads/
 

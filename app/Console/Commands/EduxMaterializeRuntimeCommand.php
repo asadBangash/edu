@@ -10,9 +10,10 @@ class EduxMaterializeRuntimeCommand extends Command
 {
     protected $signature = 'edux:materialize-runtime
                             {--source= : Override licensed Smart School src path (read-only)}
+                            {--project : Copy into project edux/ (for Git deploy) instead of storage/}
                             {--force : Re-copy even when runtime exists}';
 
-    protected $description = 'Copy Smart School from SMART_SCHOOL_SRC into storage (Laravel bridge). Does not modify the source folder.';
+    protected $description = 'Copy Smart School from SMART_SCHOOL_SRC into edux/ or storage. Does not modify the source folder.';
 
     /** @var list<string> */
     private array $syncDirs = ['application', 'backend', 'system'];
@@ -23,14 +24,21 @@ class EduxMaterializeRuntimeCommand extends Command
     public function handle(): int
     {
         $source = $this->option('source') ?: SmartSchoolPaths::sourceRoot();
-        $target = SmartSchoolPaths::runtimeRoot();
-        $uploads = SmartSchoolPaths::uploadsRoot();
         $legacyEdux = base_path('edux');
+        $inProject = (bool) $this->option('project');
 
-        if (realpath($target) !== false && realpath($target) === realpath($legacyEdux)) {
-            $this->error('EDUX_CI_PATH must not point at project edux/. Run: php artisan config:clear');
+        if ($inProject) {
+            $target = $legacyEdux;
+            $uploads = $legacyEdux.DIRECTORY_SEPARATOR.'uploads';
+        } else {
+            $target = SmartSchoolPaths::runtimeRoot();
+            $uploads = SmartSchoolPaths::uploadsRoot();
 
-            return self::FAILURE;
+            if (realpath($target) !== false && realpath($target) === realpath($legacyEdux)) {
+                $this->error('EDUX_CI_PATH must not point at project edux/. Run: php artisan config:clear');
+
+                return self::FAILURE;
+            }
         }
 
         if (! is_dir($source)) {
@@ -40,14 +48,18 @@ class EduxMaterializeRuntimeCommand extends Command
             return self::FAILURE;
         }
 
-        if (is_dir($target) && ! $this->option('force')) {
-            $this->warn("Runtime already exists: {$target}");
+        if (is_dir($target) && ! $this->option('force') && is_file($target.DIRECTORY_SEPARATOR.'index.php')) {
+            $this->warn("Target already exists: {$target}");
             $this->line('Use --force to refresh from source.');
         } else {
-            if (is_dir($target)) {
+            if ($inProject) {
+                File::ensureDirectoryExists($target);
+            } elseif (is_dir($target)) {
                 File::deleteDirectory($target);
+                File::makeDirectory($target, 0755, true);
+            } else {
+                File::makeDirectory($target, 0755, true);
             }
-            File::makeDirectory($target, 0755, true);
 
             foreach ($this->syncDirs as $dir) {
                 $from = $source.DIRECTORY_SEPARATOR.$dir;
@@ -75,7 +87,10 @@ class EduxMaterializeRuntimeCommand extends Command
             File::makeDirectory($uploads, 0755, true);
         }
         $srcUploads = $source.DIRECTORY_SEPARATOR.'uploads';
-        if (count(glob($uploads.'/*') ?: []) === 0) {
+        if ($inProject && is_dir($srcUploads) && (count(glob($uploads.'/*') ?: []) === 0)) {
+            $this->mirrorDirectory($srcUploads, $uploads);
+            $this->info('Copied uploads/ into project edux/uploads (gitignored).');
+        } elseif (! $inProject && count(glob($uploads.'/*') ?: []) === 0) {
             if (is_dir($legacyEdux.DIRECTORY_SEPARATOR.'uploads')) {
                 $this->mirrorDirectory($legacyEdux.DIRECTORY_SEPARATOR.'uploads', $uploads);
                 $this->info('Seeded writable uploads from legacy project edux/uploads.');
@@ -83,9 +98,8 @@ class EduxMaterializeRuntimeCommand extends Command
                 $this->mirrorDirectory($srcUploads, $uploads);
                 $this->info('Seeded writable uploads from source.');
             }
+            $this->linkRuntimeUploads($target, $uploads);
         }
-
-        $this->linkRuntimeUploads($target, $uploads);
 
         $omnipayDir = $target.DIRECTORY_SEPARATOR.'application'.DIRECTORY_SEPARATOR.'third_party'.DIRECTORY_SEPARATOR.'omnipay';
         if (is_dir($omnipayDir) && ! is_file($omnipayDir.DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'autoload.php')) {
@@ -93,8 +107,14 @@ class EduxMaterializeRuntimeCommand extends Command
         }
 
         $this->line('Install omnipay: composer install --working-dir='.$omnipayDir);
-        $this->info("Runtime ready at {$target}");
-        $this->line('You may delete any legacy edux/ folder under the project root.');
+        if ($inProject) {
+            $this->call('edux:sanitize-secrets', ['--edux' => $target]);
+        }
+
+        $this->info("Smart School ready at {$target}");
+        if ($inProject) {
+            $this->line('Set EDUX_CI_PATH or remove it — config auto-uses edux/ when present. Clear config cache after deploy.');
+        }
 
         return self::SUCCESS;
     }

@@ -3,8 +3,7 @@
 namespace App\Support;
 
 /**
- * Smart School paths: licensed source on disk (read-only) and materialized CI runtime (storage).
- * The Laravel project does not ship or require a top-level edux/ folder.
+ * Smart School paths: project edux/, storage runtime, or SMART_SCHOOL_SRC reference.
  */
 final class SmartSchoolPaths
 {
